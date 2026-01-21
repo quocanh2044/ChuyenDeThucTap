@@ -26,13 +26,22 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-/* ========= CORS ========= */
+/* ========= 1. FIX CORS (Cho phép Vercel truy cập) ========= */
 app.use(cors({
-    origin: [
-        "http://localhost:5173",
-        "http://localhost:5174",
-        process.env.FRONTEND_URL // 🟢 VERCEL DOMAIN
-    ],
+    origin: function (origin, callback) {
+        // Cho phép tất cả các domain của Vercel và Localhost
+        const allowedOrigins = [
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "https://frontend-gold-eight-93.vercel.app" // Domain chính xác của bạn
+        ];
+        // Cho phép origin nằm trong danh sách hoặc các request không có origin (như Postman/Server-side)
+        if (!origin || allowedOrigins.some(o => origin.startsWith(o)) || origin.includes("vercel.app")) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"]
@@ -46,6 +55,11 @@ app.use(express.urlencoded({ extended: true }));
 
 /* ========= STATIC FILES (UPLOADS) ========= */
 app.use("/uploads", express.static(path.resolve(__dirname, "uploads")));
+
+/* ========= 2. TEST ROUTE (Kiểm tra server sống) ========= */
+app.get("/", (req, res) => {
+    res.send("Backend is running successfully!");
+});
 
 /* ========= ROUTES ========= */
 app.use("/api/auth", authRoutes);
@@ -61,11 +75,9 @@ app.use("/api/admin/revenue", revenueRoute);
 /* ========= SEARCH API ========= */
 app.get("/api/search", async (req, res) => {
     const queryTerm = req.query.q;
-
     if (!queryTerm || typeof queryTerm !== "string") {
         return res.json({ movies: [] });
     }
-
     try {
         const rawResults = await searchMovies(queryTerm);
         const formattedMovies = formatMovies(req, rawResults);
@@ -76,9 +88,9 @@ app.get("/api/search", async (req, res) => {
     }
 });
 
-/* ========= PORT (Render fix) ========= */
-const PORT = process.env.PORT || 5001;
+/* ========= 3. FIX PORT (Render yêu cầu 0.0.0.0) ========= */
+const PORT = process.env.PORT || 10000;
 
-app.listen(PORT, () => {
-    console.log(`🚀 Server running at http://localhost:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+    console.log(`🚀 Server running on port ${PORT}`);
 });
