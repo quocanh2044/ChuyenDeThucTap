@@ -29,7 +29,7 @@ const CINEBOOK_CONCESSIONS = [
 // 2️⃣ API CHAT DÙNG GEMINI 3 FLASH PREVIEW
 router.post("/", async (req, res) => {
   const { history } = req.body;
-  const API_KEY = process.env.GEMINI_API_KEY; // Đảm bảo đã khai báo trong file .env
+  const API_KEY = process.env.VITE_GEMINI_API_KEY; // Đảm bảo đã khai báo trong file .env
 
   if (!API_KEY) {
     return res.status(500).json({ error: "Vui lòng cấu hình API Key ở Backend." });
