@@ -11,7 +11,8 @@ import Navbar from "./components/Navbar";
 import MovieList from "./components/MovieList";
 import BookingPage from "./components/BookingPage";
 import PaymentGateway from "./components/PaymentGateway";
-import UserProfile from "./components/UserProfile";
+import ProfilePage from "./pages/ProfilePage";
+
 import AdminDashboard from "./components/AdminDashboard";
 import Auth from "./components/Auth";
 import Footer from "./components/Footer";
@@ -221,9 +222,10 @@ const App: React.FC = () => {
         <Route
           path="/profile"
           element={
-            user ? <UserProfile user={user} /> : <Navigate to="/login" />
+            user ? <ProfilePage /> : <Navigate to="/profile" />
           }
         />
+
 
         <Route
           path="/admin"

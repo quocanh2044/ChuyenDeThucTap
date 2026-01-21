@@ -1,29 +1,38 @@
 import db from "../config/db.js";
 
-/* =======================
-   GET ALL USERS
-======================= */
-export const getUsers = async (req, res) => {
+/* =========================
+   GET ALL USERS (ADMIN)
+========================= */
+export const getAllUsers = async (req, res) => {
     try {
-        const [rows] = await db.query(
-            "SELECT id, name, email, role, created_at FROM users"
+        const [users] = await db.query(
+            "SELECT id, name, email, role FROM users"
         );
-        res.json(rows);
+        res.status(200).json(users);
     } catch (err) {
-        res.status(500).json({ message: "Lỗi lấy danh sách user" });
+        console.error("GET USERS ERROR:", err);
+        res.status(500).json({
+            message: "Failed to fetch users",
+        });
     }
 };
 
-/* =======================
-   DELETE USER
-======================= */
+/* =========================
+   DELETE USER (ADMIN)
+========================= */
 export const deleteUser = async (req, res) => {
-    const { id } = req.params;
-
     try {
+        const { id } = req.params;
+
+        // xóa point trước
+        await db.query("DELETE FROM cinepoint WHERE user_id = ?", [id]);
+
+        // xóa user
         await db.query("DELETE FROM users WHERE id = ?", [id]);
-        res.json({ message: "Xóa user thành công" });
+
+        res.json({ message: "User deleted successfully" });
     } catch (err) {
-        res.status(500).json({ message: "Xóa user thất bại" });
+        console.error("DELETE USER ERROR:", err);
+        res.status(500).json({ message: "Delete failed" });
     }
 };

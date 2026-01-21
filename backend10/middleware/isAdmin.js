@@ -1,6 +1,16 @@
-export const isAdmin = (req, res, next) => {
-    if (req.user?.role !== "admin") {
-        return res.status(403).json({ message: "Bạn không có quyền admin" });
+const isAdmin = (req, res, next) => {
+    try {
+        if (!req.user || req.user.role !== "admin") {
+            return res.status(403).json({
+                message: "Access denied. Admin only",
+            });
+        }
+        next();
+    } catch (err) {
+        return res.status(500).json({
+            message: "Authorization error",
+        });
     }
-    next();
 };
+
+export default isAdmin;

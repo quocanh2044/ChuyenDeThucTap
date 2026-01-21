@@ -16,33 +16,44 @@ import movieRoutes from "./routes/movie.routes.js";
 import seatRoutes from "./routes/seat.routes.js";
 import concessionRoutes from "./routes/concession.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
-
+import userRoutes from "./routes/user.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
+import adminMovieRoutes from "./routes/admin.movie.route.js";
+import revenueRoute from "./routes/admin.revenue.route.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// CORS
+/* ========= CORS FIX ========= */
 app.use(cors({
     origin: ["http://localhost:5173", "http://localhost:5174"],
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"]
 }));
+app.options("*", cors());
+// ❌ Bỏ vì gây pending POST/OPTIONS
+// app.options("*", cors());
 
-// Middleware
+/* ========= BODY PARSER FIX ========= */
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Static uploads
+/* ========= STATIC FILES ========= */
 app.use("/uploads", express.static(path.resolve(__dirname, "uploads")));
 
-// Routes
+/* ========= ROUTES ========= */
 app.use("/api/auth", authRoutes);
 app.use("/api/movies", movieRoutes);
 app.use("/api/seats", seatRoutes);
 app.use("/api/concessions", concessionRoutes);
 app.use("/api/bookings", bookingRoutes);
-
-// Search
+app.use("/api/users", userRoutes);
+app.use("/api/admin/movies", adminMovieRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/admin/revenue", revenueRoute);
+/* ========= SEARCH API ========= */
 app.get("/api/search", async (req, res) => {
     const queryTerm = req.query.q;
 
@@ -53,14 +64,15 @@ app.get("/api/search", async (req, res) => {
     try {
         const rawResults = await searchMovies(queryTerm);
         const formattedMovies = formatMovies(req, rawResults);
-
         res.json({ movies: formattedMovies });
     } catch (err) {
+        console.log("SEARCH ERROR:", err);
         res.status(500).json({ message: "Search error" });
     }
 });
 
-const PORT = 5001;
+/* ========= SERVER ========= */
+const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
     console.log(`🚀 Server running at http://localhost:${PORT}`);
 });

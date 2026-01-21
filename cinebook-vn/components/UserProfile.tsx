@@ -1,99 +1,81 @@
-import React from 'react';
-import { User } from '../types';
+import React from "react";
+import { UserProfile as UserProfileType } from "../types";
+import { Calendar, Clock, CreditCard, User, Mail, Ticket } from "lucide-react";
 
 interface UserProfileProps {
-  user: User | null | undefined;
+  user: UserProfileType | null | undefined;
 }
 
 const UserProfile: React.FC<UserProfileProps> = ({ user }) => {
+  if (!user) return <div className="text-center text-gray-400 py-20">🚫 Không tải được thông tin.</div>;
 
-  // Nếu không có user → tránh crash
-  if (!user) {
-    return (
-      <div className="text-center text-gray-400 py-20">
-        🚫 Không tải được thông tin người dùng.
-      </div>
-    );
-  }
+  const { name = "Người dùng", email = "", bookingHistory = [] } = user;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 animate-fade-in">
+    <div className="max-w-4xl mx-auto px-4 py-10">
+      {/* Cụm Header: Profile Card */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl p-8 mb-10 shadow-2xl border border-white/5">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 blur-3xl rounded-full -mr-10 -mt-10"></div>
 
-      {/* Header */}
-      <div className="bg-gradient-to-r from-cinema-800 to-cinema-900 rounded-3xl p-8 border border-white/10 shadow-2xl mb-8 flex flex-col md:flex-row items-center justify-between gap-6">
-
-        <div className="flex items-center gap-6">
-          <div className="w-24 h-24 bg-gradient-to-br from-yellow-400 to-red-500 rounded-full flex items-center justify-center text-4xl font-bold text-white shadow-lg">
-            {(user.name?.charAt(0) || "U").toUpperCase()}
+        <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
+          <div className="w-24 h-24 bg-gradient-to-tr from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-4xl font-black text-black shadow-lg shadow-orange-500/20">
+            {(name?.charAt(0) || "?").toUpperCase()}
           </div>
 
-          <div>
-            <h2 className="text-3xl font-bold text-white">{user.name || "Unknown User"}</h2>
-            <p className="text-gray-400">{user.email || "No email"}</p>
-
-            <div className="mt-2 inline-flex items-center gap-2 bg-yellow-500/20 border border-yellow-500/30 px-3 py-1 rounded-lg">
-              <span className="text-yellow-500 font-bold">
-                Thành viên {user.role === "admin" ? "Admin" : "Thân thiết"}
+          <div className="text-center md:text-left flex-1">
+            <h2 className="text-3xl font-extrabold text-white mb-2">{name}</h2>
+            <div className="flex flex-wrap justify-center md:justify-start gap-4">
+              <span className="flex items-center gap-2 text-gray-400 text-sm bg-black/30 px-3 py-1 rounded-full border border-white/5">
+                <Mail size={14} /> {email}
+              </span>
+              <span className="flex items-center gap-2 text-yellow-500 text-sm bg-yellow-500/10 px-3 py-1 rounded-full border border-yellow-500/20">
+                <User size={14} /> Thành viên Bạc
               </span>
             </div>
           </div>
         </div>
-
-        <div className="bg-black/30 p-6 rounded-2xl border border-white/5 min-w-[200px] text-center">
-          <p className="text-gray-400 text-sm uppercase tracking-widest mb-1">CinePoints</p>
-          <p className="text-4xl font-bold text-yellow-500">{(user.points || 0).toLocaleString()}</p>
-          <p className="text-xs text-gray-500 mt-2">Dùng điểm để đổi quà</p>
-        </div>
       </div>
 
-      {/* Booking History */}
-      <h3 className="text-2xl font-bold text-white mb-6 border-l-4 border-yellow-500 pl-4">
-        Lịch Sử Đặt Vé
-      </h3>
+      {/* Lịch sử đặt vé */}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="p-2 bg-red-500/20 rounded-lg text-red-500">
+          <Ticket size={24} />
+        </div>
+        <h3 className="text-2xl font-bold text-white">Lịch sử giao dịch</h3>
+      </div>
 
-      {(user.history?.length || 0) === 0 ? (
-        <div className="text-center py-16 bg-cinema-800/50 rounded-2xl border border-dashed border-gray-700">
-          <span className="text-4xl block mb-2">🎟️</span>
-          <p className="text-gray-400">Bạn chưa có lịch sử đặt vé nào.</p>
+      {bookingHistory.length === 0 ? (
+        <div className="bg-gray-800/50 border border-dashed border-gray-700 rounded-2xl p-20 text-center">
+          <p className="text-gray-500">Bạn chưa có giao dịch nào gần đây.</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {[...user.history].reverse().map((booking) => (
+        <div className="grid gap-4">
+          {bookingHistory.map((b) => (
             <div
-              key={booking.id}
-              className="bg-cinema-800 rounded-xl p-5 border border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 hover:border-white/20 transition-colors"
+              key={b.id}
+              className="group bg-gray-800/40 hover:bg-gray-800/80 border border-white/5 hover:border-yellow-500/30 rounded-2xl p-5 flex flex-col md:flex-row justify-between items-center transition-all duration-300"
             >
-              <div className="flex-1">
-                <h4 className="text-xl font-bold text-white mb-1">
-                  {booking.movieTitle}
-                </h4>
-
-                <div className="flex flex-wrap gap-4 text-sm text-gray-400 mb-2">
-                  <span>📅 {booking.date}</span>
-                  <span>⏰ {booking.time}</span>
-                  <span>💺 {booking.seats?.join(", ")}</span>
+              <div className="flex items-center gap-5 w-full md:w-auto">
+                <div className="hidden md:flex w-12 h-12 bg-white/5 rounded-xl items-center justify-center text-gray-400 group-hover:text-yellow-500 transition-colors">
+                  <Ticket size={24} />
                 </div>
-
-                {booking.concessions?.length > 0 && (
-                  <div className="text-xs text-gray-500">
-                    🥤 Combo:{" "}
-                    {booking.concessions
-                      .map((c) => `${c.quantity}x ${c.name}`)
-                      .join(", ")}
+                <div>
+                  <p className="text-white font-bold text-lg group-hover:text-yellow-400 transition-colors">
+                    {b.movieTitle}
+                  </p>
+                  <div className="flex gap-4 mt-1 text-sm text-gray-400">
+                    <span className="flex items-center gap-1.5"><Calendar size={14} /> {new Date(b.date).toLocaleDateString('vi-VN')}</span>
+                    <span className="flex items-center gap-1.5"><Clock size={14} /> {b.time}</span>
                   </div>
-                )}
+                </div>
               </div>
 
-              <div className="text-right">
-                <p className="text-lg font-bold text-white">
-                  {booking.totalPrice.toLocaleString()} đ
+              <div className="flex md:flex-col items-center md:items-end justify-between w-full md:w-auto mt-4 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 border-white/5">
+                <p className="text-xl font-black text-white flex items-center gap-2">
+                  <span className="text-xs text-gray-500 font-normal">Tổng:</span>
+                  {Number(b.totalAmount).toLocaleString()} <span className="text-sm underline">đ</span>
                 </p>
-                <p className="text-sm text-green-400">
-                  + {booking.pointsEarned.toLocaleString()} Points
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {new Date(booking.timestamp).toLocaleString()}
-                </p>
+                <p className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Mã vé: #{b.id}</p>
               </div>
             </div>
           ))}

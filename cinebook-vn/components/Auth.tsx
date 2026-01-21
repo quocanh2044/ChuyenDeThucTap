@@ -33,7 +33,7 @@ const Auth: React.FC<AuthProps> = ({ mode, onSuccess, onNavigate }) => {
       const token = response.token || response.accessToken;
       const user = response.user;
 
-      if (!token) throw new Error("Server không trả token");
+      if (!token) throw new Error("Đăng ký thành công!");
 
       localStorage.setItem("token", token);
 

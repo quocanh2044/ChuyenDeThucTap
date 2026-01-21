@@ -1,11 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { getMovieRecommendation } from '../services/geminiService';
+import ReactMarkdown from 'react-markdown';
+import { useNavigate } from 'react-router-dom';
+import { getMovieRecommendation, CINEBOOK_MOVIES } from '../services/geminiService';
 import { ChatMessage } from '../types';
 
 const ChatBot: React.FC = () => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'model', text: 'Xin chào! Tôi là AI tư vấn phim của CineBook. Bạn đang muốn xem phim thể loại gì hôm nay?' }
+    { role: 'model', text: 'Chào bạn! Mình là CineBot. Bạn muốn tìm phim hay hay đặt vé phim nào hôm nay? 🍿' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -19,87 +22,76 @@ const ChatBot: React.FC = () => {
     if (!input.trim() || isLoading) return;
 
     const userMsg: ChatMessage = { role: 'user', text: input };
-    setMessages(prev => [...prev, userMsg]);
+    const currentMessages = [...messages, userMsg];
+    setMessages(currentMessages);
     setInput('');
     setIsLoading(true);
 
-    const responseText = await getMovieRecommendation(input);
-    
-    setMessages(prev => [...prev, { role: 'model', text: responseText }]);
-    setIsLoading(false);
+    try {
+      const responseText = await getMovieRecommendation(currentMessages);
+      setMessages(prev => [...prev, { role: 'model', text: responseText }]);
+
+      // LOGIC CHUYỂN TRANG
+      const movieMatch = responseText.match(/\[\[(.*?)\]\]/);
+      if (movieMatch && movieMatch[1]) {
+        const movieName = movieMatch[1].trim();
+        const targetMovie = CINEBOOK_MOVIES.find(
+          m => m.title.toLowerCase() === movieName.toLowerCase()
+        );
+
+        setTimeout(() => {
+          if (targetMovie) {
+            // Chuyển thẳng vào ID phim khớp với Route /movie/:id
+            navigate(`/movie/${targetMovie.id}`); 
+          } else {
+            navigate(`/search?q=${encodeURIComponent(movieName)}`);
+          }
+          setIsOpen(false);
+        }, 2000);
+      }
+    } catch (error) {
+      setMessages(prev => [...prev, { role: 'model', text: 'Dạ, em bị nghẽn mạng chút ạ!' }]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="fixed bottom-24 right-4 z-50 flex flex-col items-end">
-      {/* Chat Window */}
       {isOpen && (
-        <div className="mb-4 w-80 sm:w-96 bg-cinema-800 border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-fade-in-up">
-          <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 p-4 flex justify-between items-center">
-            <h3 className="font-bold text-black flex items-center gap-2">
-              <span>🤖</span> CineBook AI Assistant
-            </h3>
-            <button onClick={() => setIsOpen(false)} className="text-black/60 hover:text-black">
-              ✕
-            </button>
+        <div className="mb-4 w-80 sm:w-96 bg-gray-900 border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+          <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 p-4 flex justify-between items-center text-black font-bold">
+            <span>🤖 CineBook Assistant</span>
+            <button onClick={() => setIsOpen(false)}>✕</button>
           </div>
-          
-          <div className="h-80 overflow-y-auto p-4 space-y-3 bg-cinema-900/50">
-            {messages.map((msg, idx) => (
-              <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div 
-                  className={`max-w-[80%] p-3 rounded-2xl text-sm ${
-                    msg.role === 'user' 
-                      ? 'bg-yellow-500 text-black rounded-tr-none' 
-                      : 'bg-cinema-800 border border-gray-700 text-gray-200 rounded-tl-none'
-                  }`}
-                >
-                  {msg.text}
-                </div>
-              </div>
-            ))}
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-cinema-800 border border-gray-700 p-3 rounded-2xl rounded-tl-none">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+          <div className="h-96 overflow-y-auto p-4 bg-gray-950">
+            <div className="space-y-4">
+              {messages.map((msg, idx) => (
+                <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-white'
+                  }`}>
+                    <ReactMarkdown>{msg.text}</ReactMarkdown>
                   </div>
                 </div>
-              </div>
-            )}
-            <div ref={endRef} />
+              ))}
+              <div ref={endRef} />
+            </div>
           </div>
-
-          <div className="p-3 bg-cinema-800 border-t border-white/5 flex gap-2">
+          <div className="p-3 bg-gray-900 flex gap-2 border-t border-white/5">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Hỏi về phim..."
-              className="flex-1 bg-cinema-900 border border-gray-700 rounded-full px-4 py-2 text-sm text-white focus:outline-none focus:border-yellow-500"
+              className="flex-1 bg-gray-800 rounded-xl px-4 py-2 text-white outline-none"
+              placeholder="Nhắn tin..."
             />
-            <button 
-              onClick={handleSend}
-              disabled={isLoading}
-              className="bg-yellow-500 text-black rounded-full p-2 hover:bg-yellow-400 disabled:opacity-50 transition-colors"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-              </svg>
-            </button>
+            <button onClick={handleSend} className="bg-yellow-500 p-2 rounded-xl">🚀</button>
           </div>
         </div>
       )}
-
-      {/* Toggle Button */}
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className="group flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-black rounded-full p-4 shadow-lg shadow-yellow-500/30 transition-all hover:scale-105"
-      >
-        <span className="text-2xl">✨</span>
-        <span className={`font-bold ${isOpen ? 'hidden' : 'block'}`}>Hỏi AI</span>
+      <button onClick={() => setIsOpen(!isOpen)} className="bg-yellow-500 p-4 rounded-full shadow-lg text-2xl">
+        {isOpen ? '✕' : '✨'}
       </button>
     </div>
   );

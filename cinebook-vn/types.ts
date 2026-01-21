@@ -51,18 +51,52 @@ export interface SelectedConcession extends ConcessionItem {
   quantity: number;
 }
 
+/* ------ EXISTING BOOKING RECORD ------ */
 export interface BookingRecord {
+  showtime: any;
   id: string;
   movieTitle: string;
   date: string;
   time: string;
   seats: string[];
-  concessions: { name: string; quantity: number }[]; // Added field
+  concessions: { name: string; quantity: number }[];
   totalPrice: number;
   pointsEarned: number;
   timestamp: number;
 }
 
+/* ------ ADD: USER POINT HISTORY ------ */
+export interface PointHistory {
+  id: number;
+  points: number;
+  reason: string;
+  created_at: string;
+}
+
+/* ------ ADD: BOOKING ITEM FOR PROFILE ------ */
+export interface BookingItem {
+  id: number;
+  movieTitle: string;
+  date: string;
+  time: string;
+  seats: string[];
+  concessions: { name: string; quantity: number }[];
+  totalAmount: number;
+  pointsEarned: number;
+}
+
+/* ------ ADD: PROFILE STRUCTURE ------ */
+export interface UserProfile {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  points: number;
+  bookingHistory: BookingItem[];
+  pointHistory: PointHistory[];
+}
+
+/* ------ ORIGINAL USER OBJECT ------ */
 export interface User {
   isAdmin: boolean;
   id: string;
@@ -70,7 +104,7 @@ export interface User {
   email: string;
   role: 'user' | 'admin';
   points: number;
-  history: BookingRecord[];
+  history: BookingRecord[]; // vẫn giữ nguyên để không lỗi phần cũ
 }
 
 export type ViewState =
@@ -82,4 +116,4 @@ export type ViewState =
   | 'ADMIN'
   | 'LOGIN'
   | 'REGISTER'
-  | 'BOOKING_ROOT'; 
+  | 'BOOKING_ROOT';

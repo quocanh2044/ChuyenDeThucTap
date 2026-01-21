@@ -12,14 +12,14 @@ export const createBooking = async (req, res) => {
         const userId = req.user?.id;
         const { movieId, showtimeId, seatNumber, concessions, totalAmount } = req.body;
 
-        // ✅ VALIDATE
+        // VALIDATE
         if (!userId || !movieId || !showtimeId || !seatNumber || !totalAmount) {
             return res.status(400).json({ message: "Thiếu dữ liệu" });
         }
 
         /* =========================
            🔒 CHECK GHẾ ĐÃ ĐẶT
-        ========================= */
+        ========================== */
         const newSeats = seatNumber.split(",");
 
         const [rows] = await db.execute(
@@ -28,10 +28,7 @@ export const createBooking = async (req, res) => {
         );
 
         const bookedSeats = rows.flatMap(r => r.seat_number.split(","));
-
-        const hasBookedSeat = newSeats.some(seat =>
-            bookedSeats.includes(seat)
-        );
+        const hasBookedSeat = newSeats.some(seat => bookedSeats.includes(seat));
 
         if (hasBookedSeat) {
             return res.status(400).json({
@@ -41,7 +38,7 @@ export const createBooking = async (req, res) => {
 
         /* =========================
            INSERT BOOKING
-        ========================= */
+        ========================== */
         const sql = `
             INSERT INTO bookings
             (user_id, movie_id, showtime_id, seat_number, concessions, total_amount, payment_status)
@@ -52,14 +49,28 @@ export const createBooking = async (req, res) => {
             userId,
             movieId,
             showtimeId,
-            seatNumber, // VARCHAR
+            seatNumber,
             JSON.stringify(concessions || []),
             totalAmount
         ]);
 
+        const bookingId = result.insertId;
+
+        /* =========================
+            🎁 CINEPOINT EARN LOGIC
+        ========================== */
+        const points = Math.floor(totalAmount / 10000);  // 10.000đ = 1 điểm (tuỳ chỉnh)
+
+        await db.execute(
+            `INSERT INTO cinepoint (user_id, booking_id, points, reason)
+             VALUES (?, ?, ?, ?)`,
+            [userId, bookingId, points, "booking"]
+        );
+
         return res.status(201).json({
             success: true,
-            bookingId: result.insertId
+            bookingId,
+            pointsEarned: points
         });
 
     } catch (err) {

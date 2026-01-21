@@ -4,84 +4,71 @@ import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || "SECRET_KEY";
 
-/* =====================
-   REGISTER
-===================== */
-export const register = (req, res) => {
-    const { name, email, password } = req.body;
+/* ================= REGISTER ================= */
+export const register = async (req, res) => {
+    try {
+        const { name, email, password } = req.body;
 
-    if (!name || !email || !password) {
-        return res.status(400).json({ message: "Thiếu dữ liệu" });
-    }
+        if (!name || !email || !password) {
+            return res.status(400).json({ message: "Missing fields" });
+        }
 
-    const checkSql = "SELECT * FROM users WHERE email = ?";
-    db.query(checkSql, [email], async (err, data) => {
-        if (err) return res.status(500).json({ message: "Lỗi server" });
+        const [rows] = await db.query(
+            "SELECT id FROM users WHERE email = ?",
+            [email]
+        );
 
-        if (data.length > 0) {
-            return res.status(400).json({ message: "Email đã tồn tại" });
+        if (rows.length) {
+            return res.status(400).json({ message: "Email already exists" });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const insertSql =
-            "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)";
-
-        db.query(
-            insertSql,
-            [name, email, hashedPassword, "user"],
-            (err2, result) => {
-                if (err2) {
-                    return res.status(500).json({ message: "Lỗi tạo tài khoản" });
-                }
-
-                res.status(201).json({
-                    message: "Đăng ký thành công",
-                    user: {
-                        id: result.insertId,
-                        name,
-                        email,
-                        role: "user",
-                    },
-                });
-            }
+        await db.query(
+            "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, 'user')",
+            [name, email, hashedPassword]
         );
-    });
+
+        return res.status(201).json({ message: "REGISTER OK" });
+    } catch (err) {
+        console.error("REGISTER ERROR:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
 };
 
-/* =====================
-   LOGIN
-===================== */
-export const login = (req, res) => {
-    const { email, password } = req.body;
+/* ================= LOGIN ================= */
+export const login = async (req, res) => {
+    try {
+        const { email, password } = req.body;
 
-    const sql = "SELECT * FROM users WHERE email = ?";
-    db.query(sql, [email], async (err, data) => {
-        if (err) return res.status(500).json({ message: "Lỗi server" });
+        const [rows] = await db.query(
+            "SELECT id, name, email, password, role FROM users WHERE email = ?",
+            [email]
+        );
 
-        if (data.length === 0) {
-            return res.status(400).json({ message: "Email không tồn tại" });
+        if (!rows.length) {
+            return res.status(404).json({ message: "User not found" });
         }
 
-        const user = data[0];
-        const isValid = await bcrypt.compare(password, user.password);
+        const user = rows[0];
 
-        if (!isValid) {
-            return res.status(400).json({ message: "Sai mật khẩu" });
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: "Wrong password" });
         }
 
         const token = jwt.sign(
             {
                 id: user.id,
-                role: user.role,
                 email: user.email,
+                role: user.role,
             },
             JWT_SECRET,
-            { expiresIn: "7d" }
+            { expiresIn: "1d" }
         );
 
-        res.json({
-            message: "Đăng nhập thành công",
+        return res.json({
+            message: "LOGIN OK",
             token,
             user: {
                 id: user.id,
@@ -90,5 +77,8 @@ export const login = (req, res) => {
                 role: user.role,
             },
         });
-    });
+    } catch (err) {
+        console.error("LOGIN ERROR:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
 };
