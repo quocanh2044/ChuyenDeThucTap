@@ -20,7 +20,7 @@ import userRoutes from "./routes/user.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import adminMovieRoutes from "./routes/admin.movie.route.js";
 import revenueRoute from "./routes/admin.revenue.route.js";
-
+import chatRoutes from "./routes/airoutes.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -71,7 +71,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/admin/movies", adminMovieRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/admin/revenue", revenueRoute);
-
+app.use("/api/chat", chatRoutes); //
 /* ========= SEARCH API ========= */
 app.get("/api/search", async (req, res) => {
     const queryTerm = req.query.q;
