@@ -7,7 +7,8 @@ interface ConcessionSelectorProps {
   onContinue: (selected: SelectedConcession[], total: number) => void;
 }
 
-const IMAGE_URL = import.meta.env.VITE_IMAGE_URL || "http://localhost:5001";
+// Sửa lại port cho đúng với Backend (thường là 10000 theo server.js bạn gửi)
+const IMAGE_URL = import.meta.env.VITE_IMAGE_URL || "http://localhost:10000";
 
 const ConcessionSelector: React.FC<ConcessionSelectorProps> = ({
   onBack,
