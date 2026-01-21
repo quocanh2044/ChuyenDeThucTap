@@ -1,7 +1,17 @@
 import { ChatMessage } from '../types';
 
-// Lấy API_URL từ env, nếu không có thì dùng localhost (Port 10000 theo server của bạn)
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:10000";
+// 1. Lấy URL gốc từ môi trường
+const RAW_API_URL = import.meta.env.VITE_API_URL || "http://localhost:10000";
+
+// 2. Logic làm sạch URL để tránh lỗi /api/api/chat
+const getCleanUrl = (baseUrl: string) => {
+  let url = baseUrl.trim();
+  if (url.endsWith('/')) url = url.slice(0, -1); // Xóa dấu / ở cuối nếu có
+  if (url.endsWith('/api')) url = url.slice(0, -4); // Xóa /api nếu bạn đã lỡ điền trong env
+  return `${url}/api/chat`;
+};
+
+const FINAL_API_URL = getCleanUrl(RAW_API_URL);
 
 // DỮ LIỆU PHIM (GIỮ NGUYÊN 100%)
 export const CINEBOOK_MOVIES = [
@@ -29,9 +39,9 @@ export const CINEBOOK_CONCESSIONS = [
 ];
 
 export const getMovieRecommendation = async (history: ChatMessage[]) => {
-  // Thay vì gọi trực tiếp Google, ta gọi qua Backend của mình để tránh lỗi 403 và lộ Key
   try {
-    const response = await fetch(`${API_URL}/api/chat`, {
+    // Gọi đến URL đã được làm sạch
+    const response = await fetch(FINAL_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
@@ -44,12 +54,11 @@ export const getMovieRecommendation = async (history: ChatMessage[]) => {
 
     if (response.ok) {
       const data = await response.json();
-      return data.text; // Backend trả về { text: "Nội dung phản hồi" }
+      return data.text; 
     }
 
-    // Xử lý lỗi từ Backend
     const errorData = await response.json().catch(() => ({}));
-    console.error("Backend Error:", errorData);
+    console.error("Backend Error Detail:", errorData);
     return "CineBot đang bận xíu, bạn thử lại nhé! 🎬";
 
   } catch (error) {
