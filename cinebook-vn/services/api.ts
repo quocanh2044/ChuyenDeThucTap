@@ -25,7 +25,21 @@ API.interceptors.request.use(
     },
     (error) => Promise.reject(error)
 );
+API.interceptors.response.use(
+    (res) => res,
+    (err) => {
+        if (err.response?.status === 403) {
+            console.error("Lỗi 403: Token không hợp lệ hoặc không có quyền truy cập.");
+        }
+        return Promise.reject(err);
+    }
+);
 
+/* =========================
+   CHAT AI (Hàm fix lỗi 403 chat)
+========================= */
+export const sendMessage = (message: string) =>
+    API.post("/chat", { message }).then(res => res.data);
 /* =========================
    AUTH
 ========================= */
