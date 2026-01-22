@@ -24,13 +24,26 @@ export const getAllMovies = async (req, res) => {
             ORDER BY id DESC
         `);
 
-        const result = movies.map(movie => ({
-            ...movie,
-            image: movie.image
-                ? `${BASE}/uploads/${movie.image}`
-                : `${BASE}/uploads/no-image.png`,
-            price: Number(movie.price) || 0
-        }));
+        const result = movies.map(movie => {
+            let finalImage = null;
+
+            if (movie.image) {
+                if (movie.image.startsWith("http")) {
+                    // URL trực tiếp
+                    finalImage = movie.image;
+                } else {
+                    // Filename (có thể dùng khi upload)
+                    finalImage = `${BASE}/uploads/${movie.image}`;
+                }
+            }
+
+            return {
+                ...movie,
+                image: finalImage,
+                price: Number(movie.price) || 0,
+                duration: Number(movie.duration) || 0,
+            };
+        });
 
         res.json(result);
     } catch (err) {
@@ -40,7 +53,7 @@ export const getAllMovies = async (req, res) => {
 };
 
 /* =========================
-   CREATE MOVIE
+   CREATE MOVIE (URL MODE)
 ========================= */
 export const createMovie = async (req, res) => {
     try {
@@ -50,7 +63,7 @@ export const createMovie = async (req, res) => {
             director,
             description,
             duration,
-            image,
+            image,   // URL gửi từ frontend
             upcoming = 0,
             rating = 0,
             isNowPlaying = 1,
@@ -106,34 +119,33 @@ export const updateMovie = async (req, res) => {
             price
         } = req.body;
 
-await db.query(
-    `UPDATE movies SET
-        title = COALESCE(?, title),
-        genre = COALESCE(?, genre),
-        director = COALESCE(?, director),
-        description = COALESCE(?, description),
-        duration = COALESCE(?, duration),
-        image = COALESCE(?, image),
-        upcoming = COALESCE(?, upcoming),
-        rating = COALESCE(?, rating),
-        isNowPlaying = COALESCE(?, isNowPlaying),
-        price = COALESCE(?, price)
-     WHERE id = ?`,
-     [
-        title || null,
-        genre || null,
-        director || null,
-        description || null,
-        duration || null,
-        image || null,
-        upcoming ?? null,
-        rating ?? null,
-        isNowPlaying ?? null,
-        price ?? null,
-        id
-     ]
-);
-
+        await db.query(
+            `UPDATE movies SET
+                title = COALESCE(?, title),
+                genre = COALESCE(?, genre),
+                director = COALESCE(?, director),
+                description = COALESCE(?, description),
+                duration = COALESCE(?, duration),
+                image = COALESCE(?, image),
+                upcoming = COALESCE(?, upcoming),
+                rating = COALESCE(?, rating),
+                isNowPlaying = COALESCE(?, isNowPlaying),
+                price = COALESCE(?, price)
+             WHERE id = ?`,
+             [
+                title || null,
+                genre || null,
+                director || null,
+                description || null,
+                duration || null,
+                image || null,
+                upcoming ?? null,
+                rating ?? null,
+                isNowPlaying ?? null,
+                price ?? null,
+                id
+             ]
+        );
 
         res.json({ message: "Movie updated successfully" });
     } catch (err) {
