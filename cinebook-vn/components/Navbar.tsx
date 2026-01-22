@@ -1,4 +1,3 @@
-// components/Navbar.tsx
 import React, { useState, useEffect } from 'react';
 import { ViewState, User } from '../types';
 import {
@@ -23,7 +22,6 @@ const Navbar: React.FC<NavbarProps> = ({ user, onNavigate, onLogout }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // Hiệu ứng đổi màu nền khi cuộn trang
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
@@ -33,26 +31,23 @@ const Navbar: React.FC<NavbarProps> = ({ user, onNavigate, onLogout }) => {
   const displayName = user?.name || "Người dùng";
   const role = user?.role === "admin" ? "admin" : "user";
 
-  const checkAuthAndNavigate = (targetView: ViewState, actionName: string) => {
+  const checkAuthAndNavigate = (targetView: ViewState) => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      alert(`Vui lòng đăng nhập để ${actionName}.`);
-      onNavigate('LOGIN');
-      return;
-    }
+    if (!token) return onNavigate('LOGIN');
     onNavigate(targetView);
     setIsMenuOpen(false);
   };
 
   return (
-    <nav className={`sticky top-0 z-50 transition-all duration-300 ${scrolled
+    <nav className={`sticky top-0 z-50 transition-all duration-300 ${
+      scrolled
         ? 'bg-gray-950/90 backdrop-blur-md shadow-2xl border-b border-white/5 py-2'
         : 'bg-gray-950 py-4'
-      }`}>
+    }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
 
-          {/* LEFT: Logo & Brand */}
+          {/* Logo */}
           <div
             className="flex items-center gap-2 cursor-pointer group"
             onClick={() => onNavigate('BOOKING_ROOT')}
@@ -64,11 +59,13 @@ const Navbar: React.FC<NavbarProps> = ({ user, onNavigate, onLogout }) => {
               <span className="text-xl font-black tracking-tighter text-white">
                 CINE<span className="text-red-500">BOOK</span>
               </span>
-              <span className="text-[10px] text-gray-500 font-bold tracking-[0.2em] uppercase">Vietnam</span>
+              <span className="text-[10px] text-gray-500 font-bold tracking-[0.2em] uppercase">
+                Vietnam
+              </span>
             </div>
           </div>
 
-          {/* CENTER: Main Navigation */}
+          {/* Desktop NAV */}
           <div className="hidden md:flex items-center gap-1">
             <button
               onClick={() => onNavigate('BOOKING_ROOT')}
@@ -76,8 +73,10 @@ const Navbar: React.FC<NavbarProps> = ({ user, onNavigate, onLogout }) => {
             >
               Phim đang chiếu
             </button>
+
+            {/* Browse concessions (view mode, no login required) */}
             <button
-              onClick={() => checkAuthAndNavigate('CONCESSIONS', 'đặt bắp nước')}
+              onClick={() => onNavigate('CONCESSION_VIEW')}
               className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-400 hover:text-orange-400 transition-colors rounded-lg hover:bg-orange-400/5"
             >
               <Popcorn size={18} />
@@ -85,10 +84,9 @@ const Navbar: React.FC<NavbarProps> = ({ user, onNavigate, onLogout }) => {
             </button>
           </div>
 
-          {/* RIGHT: User Actions */}
+          {/* User Menu */}
           <div className="flex items-center gap-4">
 
-            {/* Language Switcher (Optional) */}
             <div className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-gray-300">
               <span>🇻🇳</span>
               <span>VN</span>
@@ -98,10 +96,11 @@ const Navbar: React.FC<NavbarProps> = ({ user, onNavigate, onLogout }) => {
               <div className="relative">
                 <button
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
-                  className={`flex items-center gap-3 p-1 pr-3 rounded-full transition-all border ${isMenuOpen
+                  className={`flex items-center gap-3 p-1 pr-3 rounded-full transition-all border ${
+                    isMenuOpen
                       ? 'bg-white/10 border-red-500/50'
                       : 'bg-white/5 border-white/10 hover:border-white/20'
-                    }`}
+                  }`}
                 >
                   <div className="w-8 h-8 bg-gradient-to-tr from-gray-700 to-gray-800 rounded-full flex items-center justify-center border border-white/10 shadow-inner">
                     <span className="text-xs font-bold text-white">
@@ -111,14 +110,18 @@ const Navbar: React.FC<NavbarProps> = ({ user, onNavigate, onLogout }) => {
                   <span className="hidden lg:block text-sm font-bold text-gray-200">
                     {displayName}
                   </span>
-                  <ChevronDown size={14} className={`text-gray-500 transition-transform duration-300 ${isMenuOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown
+                    size={14}
+                    className={`text-gray-500 transition-transform duration-300 ${
+                      isMenuOpen ? 'rotate-180' : ''
+                    }`}
+                  />
                 </button>
 
-                {/* Dropdown Menu hiện đại */}
                 {isMenuOpen && (
                   <>
-                    <div className="fixed inset-0 z-[-1]" onClick={() => setIsMenuOpen(false)}></div>
-                    <div className="absolute right-0 mt-3 w-60 bg-gray-900 border border-white/10 rounded-2xl shadow-2xl py-2 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                    <div className="fixed inset-0 z-[-1]" onClick={() => setIsMenuOpen(false)} />
+                    <div className="absolute right-0 mt-3 w-60 bg-gray-900 border border-white/10 rounded-2xl shadow-2xl py-2 overflow-hidden">
                       <div className="px-4 py-3 border-b border-white/5 mb-1 bg-white/[0.02]">
                         <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Thành viên</p>
                         <p className="text-sm font-bold text-white truncate">{displayName}</p>
@@ -126,7 +129,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onNavigate, onLogout }) => {
 
                       {role === "admin" && (
                         <button
-                          onClick={() => checkAuthAndNavigate('ADMIN', 'truy cập quản trị')}
+                          onClick={() => checkAuthAndNavigate('ADMIN')}
                           className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
                         >
                           <LayoutDashboard size={18} />
@@ -135,7 +138,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onNavigate, onLogout }) => {
                       )}
 
                       <button
-                        onClick={() => checkAuthAndNavigate('PROFILE', 'xem hồ sơ')}
+                        onClick={() => checkAuthAndNavigate('PROFILE')}
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 transition-colors"
                       >
                         <UserCircle size={18} />
@@ -147,7 +150,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onNavigate, onLogout }) => {
                         Cài đặt
                       </button>
 
-                      <div className="h-px bg-white/5 my-1"></div>
+                      <div className="h-px bg-white/5 my-1" />
 
                       <button
                         onClick={() => { onLogout(); setIsMenuOpen(false); }}
@@ -177,11 +180,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onNavigate, onLogout }) => {
               </div>
             )}
 
-            {/* Mobile Menu Trigger */}
-            <button
-              className="md:hidden p-2 text-gray-400 hover:text-white"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
+            <button className="md:hidden p-2 text-gray-400 hover:text-white" onClick={() => setIsMenuOpen(!isMenuOpen)}>
               <Menu size={24} />
             </button>
           </div>

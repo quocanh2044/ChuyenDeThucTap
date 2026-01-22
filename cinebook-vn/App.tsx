@@ -55,7 +55,6 @@ const App: React.FC = () => {
   useEffect(() => {
     getMovies()
       .then((data) => {
-        // backend có thể trả mảng hoặc { movies: [] }
         setMovies(data.movies ?? data);
       })
       .catch((err) => console.error("Lỗi load phim:", err));
@@ -72,7 +71,6 @@ const App: React.FC = () => {
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     } else {
-      // fallback tạm
       setUser({
         id: 0,
         name: "Người dùng",
@@ -94,7 +92,7 @@ const App: React.FC = () => {
   };
 
   /* =========================
-     BOOKING FLOW
+     BOOKING COMPLETE
   ========================= */
   const handleBookingComplete = (
     movie: Movie,
@@ -131,7 +129,13 @@ const App: React.FC = () => {
         user={user}
         onLogout={handleLogout}
         onNavigate={(view) =>
-          navigate(view === "BOOKING_ROOT" ? "/" : `/${view.toLowerCase()}`)
+          navigate(
+            view === "BOOKING_ROOT"
+              ? "/"
+              : view === "CONCESSION_VIEW"
+              ? "/concession-view"
+              : `/${view.toLowerCase()}`
+          )
         }
         onSearch={(term) =>
           navigate(`/search?q=${encodeURIComponent(term)}`)
@@ -147,21 +151,50 @@ const App: React.FC = () => {
                 movies={movies}
                 onBookNow={(m) => navigate(`/movie/${m.id}`)}
               />
-              <MovieList
-                onBookNow={(id) => navigate(`/movie/${id}`)}
-              />
+              <MovieList onBookNow={(id) => navigate(`/movie/${id}`)} />
             </>
           }
         />
 
         <Route
           path="/movie/:id"
-          element={
-            <BookingPage onCompleteBooking={handleBookingComplete} />
-          }
+          element={<BookingPage onCompleteBooking={handleBookingComplete} />}
         />
 
         <Route path="/search" element={<SearchResultsPage />} />
+
+        {/* VIEW MODE (free browse) */}
+        <Route
+          path="/concession-view"
+          element={
+            <ConcessionsPage
+              browseOnly
+              onBack={() => navigate(-1)}
+            />
+          }
+        />
+
+        {/* BOOKING MODE (checkout flow) */}
+        <Route
+          path="/concessions"
+          element={
+            user ? (
+              <ConcessionsPage
+                onBack={() => navigate(-1)}
+                onContinue={(selected, total) => {
+                  setCurrentBooking((prev) => ({
+                    ...prev,
+                    concessions: selected,
+                    total: prev.total + total,
+                  }));
+                  navigate("/payment");
+                }}
+              />
+            ) : (
+              <Navigate to="/login" state={{ from: "/concessions" }} />
+            )
+          }
+        />
 
         <Route
           path="/payment"
@@ -190,10 +223,7 @@ const App: React.FC = () => {
               mode="LOGIN"
               onSuccess={(userData) => {
                 setUser(userData);
-                localStorage.setItem(
-                  "user",
-                  JSON.stringify(userData)
-                );
+                localStorage.setItem("user", JSON.stringify(userData));
                 navigate("/");
               }}
               onNavigate={(path) => navigate(path)}
@@ -208,10 +238,7 @@ const App: React.FC = () => {
               mode="REGISTER"
               onSuccess={(userData) => {
                 setUser(userData);
-                localStorage.setItem(
-                  "user",
-                  JSON.stringify(userData)
-                );
+                localStorage.setItem("user", JSON.stringify(userData));
                 navigate("/");
               }}
               onNavigate={(path) => navigate(path)}
@@ -219,47 +246,11 @@ const App: React.FC = () => {
           }
         />
 
-        <Route
-          path="/profile"
-          element={
-            user ? <ProfilePage /> : <Navigate to="/profile" />
-          }
-        />
-
+        <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/profile" />} />
 
         <Route
           path="/admin"
-          element={
-            user?.role === "admin" ? (
-              <AdminDashboard />
-            ) : (
-              <Navigate to="/" />
-            )
-          }
-        />
-
-        <Route
-          path="/concessions"
-          element={
-            user ? (
-              <ConcessionsPage
-                onBack={() => navigate(-1)}
-                onContinue={(selected, total) => {
-                  setCurrentBooking((prev) => ({
-                    ...prev,
-                    concessions: selected,
-                    total: prev.total + total,
-                  }));
-                  navigate("/payment");
-                }}
-              />
-            ) : (
-              <Navigate
-                to="/login"
-                state={{ from: "/concessions" }}
-              />
-            )
-          }
+          element={user?.role === "admin" ? <AdminDashboard /> : <Navigate to="/" />}
         />
 
         <Route path="*" element={<Navigate to="/" />} />

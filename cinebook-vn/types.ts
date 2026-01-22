@@ -116,4 +116,7 @@ export type ViewState =
   | 'ADMIN'
   | 'LOGIN'
   | 'REGISTER'
-  | 'BOOKING_ROOT';
+  | 'BOOKING_ROOT'
+  | 'CONCESSION_VIEW';
+
+
