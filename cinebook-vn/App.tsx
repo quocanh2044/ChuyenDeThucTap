@@ -20,14 +20,14 @@ import HeroBanner from "./components/HeroBanner";
 import ChatBot from "./components/ChatBot";
 import SearchResultsPage from "./components/SearchResultsPage";
 import ConcessionsPage from "./components/ConcessionSelector";
-
+import ConcessionsPage1 from "./components/ConcessionSelector1";
 import { Movie, Seat, User, SelectedConcession } from "./types";
 import { getMovies } from "./services/api";
 
 const BASE_TICKET_PRICE = 55000;
 
 interface BookingDetails {
-  movie: Movie | undefined;
+  movie?: Movie;
   time: string;
   seats: Seat[];
   concessions: SelectedConcession[];
@@ -49,41 +49,23 @@ const App: React.FC = () => {
 
   const navigate = useNavigate();
 
-  /* =========================
-     LOAD MOVIES
-  ========================= */
+  /* LOAD MOVIES */
   useEffect(() => {
     getMovies()
-      .then((data) => {
-        setMovies(data.movies ?? data);
-      })
+      .then((data) => setMovies(data.movies ?? data))
       .catch((err) => console.error("Lỗi load phim:", err));
   }, []);
 
-  /* =========================
-     AUTO LOGIN (TOKEN)
-  ========================= */
+  /* AUTO LOGIN */
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
     const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    } else {
-      setUser({
-        id: 0,
-        name: "Người dùng",
-        email: "",
-        points: 0,
-        role: "user",
-      });
-    }
+    if (savedUser) setUser(JSON.parse(savedUser));
   }, []);
 
-  /* =========================
-     LOGOUT
-  ========================= */
+  /* LOGOUT */
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -91,33 +73,31 @@ const App: React.FC = () => {
     navigate("/login");
   };
 
-  /* =========================
-     BOOKING COMPLETE
-  ========================= */
+  /* BOOKING COMPLETE */
   const handleBookingComplete = (
     movie: Movie,
-    selectedShowtimeId: number,
-    selectedSeat: string,
+    showtimeId: number,
+    selectedSeatId: string,
     concessions: SelectedConcession[],
     finalTotal: number,
     time: string
   ) => {
+    const seat: Seat = {
+      id: selectedSeatId,
+      price: BASE_TICKET_PRICE,
+      type: "standard",
+      row: "",
+      number: 0,
+      isReserved: false,
+    };
+
     setCurrentBooking({
       movie,
       time,
-      seats: [
-        {
-          id: selectedSeat,
-          price: BASE_TICKET_PRICE,
-          type: "standard",
-          row: "",
-          number: 0,
-          isReserved: false,
-        },
-      ],
+      seats: [seat],
       concessions,
       total: finalTotal,
-      showtimeId: selectedShowtimeId,
+      showtimeId,
     });
 
     navigate("/payment");
@@ -137,9 +117,7 @@ const App: React.FC = () => {
               : `/${view.toLowerCase()}`
           )
         }
-        onSearch={(term) =>
-          navigate(`/search?q=${encodeURIComponent(term)}`)
-        }
+        onSearch={(term) => navigate(`/search?q=${encodeURIComponent(term)}`)}
       />
 
       <Routes>
@@ -163,18 +141,13 @@ const App: React.FC = () => {
 
         <Route path="/search" element={<SearchResultsPage />} />
 
-        {/* VIEW MODE (free browse) */}
+        {/* VIEW MODE */}
         <Route
           path="/concession-view"
-          element={
-            <ConcessionsPage
-              browseOnly
-              onBack={() => navigate(-1)}
-            />
-          }
+          element={<ConcessionsPage1 browseOnly onBack={() => navigate(-1)} />}
         />
 
-        {/* BOOKING MODE (checkout flow) */}
+        {/* BOOKING MODE */}
         <Route
           path="/concessions"
           element={
@@ -216,6 +189,7 @@ const App: React.FC = () => {
           }
         />
 
+        {/* AUTH */}
         <Route
           path="/login"
           element={
@@ -246,8 +220,13 @@ const App: React.FC = () => {
           }
         />
 
-        <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/profile" />} />
+        {/* PROFILE */}
+        <Route
+          path="/profile"
+          element={user ? <ProfilePage /> : <Navigate to="/login" state={{ from: "/profile" }} />}
+        />
 
+        {/* ADMIN */}
         <Route
           path="/admin"
           element={user?.role === "admin" ? <AdminDashboard /> : <Navigate to="/" />}

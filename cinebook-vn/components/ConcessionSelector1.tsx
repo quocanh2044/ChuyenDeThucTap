@@ -5,11 +5,12 @@ import { getConcessions } from "../services/api";
 
 interface ConcessionSelectorProps {
   onBack: () => void;
+  browseOnly?: boolean; // Dùng để chỉ xem không chọn
 }
 
 const IMAGE_URL = import.meta.env.VITE_IMAGE_URL || "http://localhost:10000";
 
-const ConcessionSelector: React.FC<ConcessionSelectorProps> = ({ onBack }) => {
+const ConcessionSelector: React.FC<ConcessionSelectorProps> = ({ onBack, browseOnly }) => {
   const [concessionItems, setConcessionItems] = useState<ConcessionItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,7 +48,7 @@ const ConcessionSelector: React.FC<ConcessionSelectorProps> = ({ onBack }) => {
               key={item.id}
               className="group bg-gray-900 rounded-3xl overflow-hidden border border-white/5 transition-all duration-300 transform hover:-translate-y-1 hover:border-white/20"
             >
-              {/* Image Section */}
+              {/* Image */}
               <div className="relative aspect-[4/3] overflow-hidden bg-gray-800">
                 <img
                   src={`${IMAGE_URL}/${item.image}`}
@@ -58,9 +59,11 @@ const ConcessionSelector: React.FC<ConcessionSelectorProps> = ({ onBack }) => {
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent opacity-60" />
               </div>
 
-              {/* Content Section */}
+              {/* Content */}
               <div className="p-5 flex flex-col">
-                <h3 className="text-lg font-bold text-white mb-1 line-clamp-1">{item.name}</h3>
+                <h3 className="text-lg font-bold text-white mb-1 line-clamp-1">
+                  {item.name}
+                </h3>
                 <p className="text-sm text-gray-400 mb-4 line-clamp-2 h-10 leading-relaxed">
                   {item.description}
                 </p>
@@ -69,6 +72,15 @@ const ConcessionSelector: React.FC<ConcessionSelectorProps> = ({ onBack }) => {
                   {item.price.toLocaleString("vi-VN")}{" "}
                   <span className="text-xs uppercase">đ</span>
                 </span>
+
+                {/* 🍿 Nút + trừ và checkout ẩn khi browseOnly = true */}
+                {!browseOnly && (
+                  <button
+                    className="mt-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl transition"
+                  >
+                    Chọn
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -78,7 +90,6 @@ const ConcessionSelector: React.FC<ConcessionSelectorProps> = ({ onBack }) => {
   );
 };
 
-// Loading skeleton
 const LoadingSkeleton = () => (
   <div className="min-h-screen bg-gray-950 p-8">
     <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
