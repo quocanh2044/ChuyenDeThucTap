@@ -13,6 +13,9 @@ type Tab = "dashboard" | "movies" | "users";
 const FALLBACK_POSTER = "https://via.placeholder.com/300x450?text=No+Image";
 const BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || "http://localhost:5000";
 
+// Danh sách thể loại mẫu
+const GENRES = ["Hành động", "Hài hước", "Kinh dị", "Tình cảm", "Hoạt hình", "Khoa học viễn tưởng", "Phiêu lưu"];
+
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [users, setUsers] = useState<User[]>([]);
@@ -23,6 +26,7 @@ const AdminDashboard: React.FC = () => {
   const [movieForm, setMovieForm] = useState({
     title: "",
     poster: "",
+    genre: "Hành động", // Mặc định
     price: 80000,
     duration: 120,
     status: "now" as "now" | "upcoming",
@@ -53,6 +57,7 @@ const AdminDashboard: React.FC = () => {
         return {
           id: m.id,
           title: m.title,
+          genre: m.genre || "Chưa phân loại", // Lấy thể loại từ API
           price: Number(m.price) || 0,
           duration: Number(m.duration) || 0,
           poster: finalPoster,
@@ -91,6 +96,7 @@ const AdminDashboard: React.FC = () => {
 
     const movieData = {
       title: movieForm.title,
+      genre: movieForm.genre, // Gửi thể loại lên server
       price: Number(movieForm.price),
       duration: Number(movieForm.duration),
       image: movieForm.poster,
@@ -102,7 +108,7 @@ const AdminDashboard: React.FC = () => {
       await addMovieApi(movieData);
       alert("Thêm phim thành công!");
       setShowMovieForm(false);
-      setMovieForm({ title: "", poster: "", price: 80000, duration: 120, status: "now" });
+      setMovieForm({ title: "", poster: "", genre: "Hành động", price: 80000, duration: 120, status: "now" });
       fetchData();
     } catch (err) {
       alert("Lỗi: Kiểm tra lại dữ liệu nhập vào (400)");
@@ -132,14 +138,14 @@ const AdminDashboard: React.FC = () => {
 
   if (loading)
     return (
-      <div className="h-screen flex items-center justify-center bg-cinema-900 text-white font-black italic uppercase tracking-widest">
+      <div className="h-screen flex items-center justify-center bg-cinema-900 text-white font-black italic uppercase tracking-widest text-center">
         Đang trích xuất dữ liệu tài chính...
       </div>
     );
 
   return (
     <div className="flex min-h-screen bg-cinema-900 text-white font-sans">
-      <aside className="w-72 bg-cinema-800 p-8 border-r border-white/5 flex flex-col">
+      <aside className="w-72 bg-cinema-800 p-8 border-r border-white/5 flex flex-col fixed h-full">
         <div className="mb-12">
           <h2 className="text-2xl font-black text-yellow-500 tracking-tighter italic">CINEMA ADMIN</h2>
         </div>
@@ -164,7 +170,7 @@ const AdminDashboard: React.FC = () => {
         </nav>
       </aside>
 
-      <main className="flex-1 p-10 overflow-y-auto">
+      <main className="flex-1 p-10 ml-72 overflow-y-auto">
         {activeTab === "dashboard" && (
           <div className="space-y-10 animate-in fade-in duration-500">
             <h1 className="text-3xl font-bold">Thống kê tài chính</h1>
@@ -188,7 +194,7 @@ const AdminDashboard: React.FC = () => {
                   .map((m) => (
                     <div key={m.id}>
                       <div className="flex justify-between text-sm mb-2 font-bold">
-                        <span>{m.title}</span>
+                        <span>{m.title} <span className="text-gray-500 font-normal ml-2">({m.genre})</span></span>
                         <span className="text-yellow-500">{m.revenue.toLocaleString()} đ</span>
                       </div>
                       <div className="w-full bg-cinema-900 rounded-full h-3">
@@ -213,7 +219,7 @@ const AdminDashboard: React.FC = () => {
         {activeTab === "movies" && (
           <div className="animate-in slide-in-from-bottom-4 duration-500">
             <div className="flex justify-between items-center mb-10">
-              <h2 className="text-3xl font-bold italic">QUẢN LÝ KHO PHIM</h2>
+              <h2 className="text-3xl font-bold italic uppercase tracking-tighter">Quản lý kho phim</h2>
               <button
                 onClick={() => setShowMovieForm(true)}
                 className="bg-green-600 hover:bg-green-500 px-8 py-3 rounded-2xl font-black text-sm shadow-lg shadow-green-600/20"
@@ -235,15 +241,21 @@ const AdminDashboard: React.FC = () => {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       onError={(e) => ((e.target as HTMLImageElement).src = FALLBACK_POSTER)}
                     />
-
-                    <div className="absolute top-2 left-2 px-3 py-1 rounded-xl text-xs font-bold shadow-lg bg-black/70">
+                    
+                    {/* Badge trạng thái */}
+                    <div className="absolute top-2 left-2 px-3 py-1 rounded-xl text-[10px] font-black shadow-lg bg-black/80 backdrop-blur-md uppercase">
                       {m.isNowPlaying ? (
                         <span className="text-green-400">Đang chiếu</span>
                       ) : m.upcoming ? (
                         <span className="text-blue-400">Sắp chiếu</span>
                       ) : (
-                        <span className="text-gray-400">Không rõ</span>
+                        <span className="text-gray-400">Lưu kho</span>
                       )}
+                    </div>
+
+                    {/* Badge thể loại */}
+                    <div className="absolute bottom-2 left-2 px-3 py-1 rounded-lg text-[10px] font-bold bg-yellow-500 text-black shadow-lg">
+                      {m.genre}
                     </div>
                   </div>
 
@@ -253,9 +265,10 @@ const AdminDashboard: React.FC = () => {
                         {m.title}
                       </h4>
                       <div className="bg-cinema-900/50 p-4 rounded-2xl mb-6 space-y-1">
+                        <p className="text-xs text-gray-400">Thời lượng: {m.duration} phút</p>
                         <p className="text-sm font-bold">Đã bán: {m.sold} vé</p>
                         <p className="text-sm font-bold text-yellow-500">
-                          Tiền: {m.revenue.toLocaleString()}đ
+                          {m.revenue.toLocaleString()}đ
                         </p>
                       </div>
                     </div>
@@ -263,7 +276,7 @@ const AdminDashboard: React.FC = () => {
                       onClick={() => handleDeleteMovie(m.id)}
                       className="w-full bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white py-3.5 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all"
                     >
-                      Xóa phim này
+                      Xóa phim
                     </button>
                   </div>
                 </div>
@@ -272,105 +285,133 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
 
+        {/* ... Tab Users giữ nguyên ... */}
         {activeTab === "users" && (
-          <div className="bg-cinema-800 rounded-3xl border border-white/5 overflow-hidden shadow-2xl">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-white/5 text-gray-400 text-[10px] font-black uppercase tracking-widest">
-                  <th className="p-6">Thông tin khách hàng</th>
-                  <th className="p-6 text-right">Hành động</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-white/5 transition-colors">
-                    <td className="p-6">
-                      <p className="font-bold">{u.name}</p>
-                      <p className="text-xs text-gray-500 italic">{u.email}</p>
-                    </td>
-                    <td className="p-6 text-right">
-                      {u.role !== "admin" && (
-                        <button
-                          onClick={() => handleDeleteUser(u.id)}
-                          className="text-red-500 font-bold text-xs uppercase hover:underline underline-offset-4"
-                        >
-                          Xóa
-                        </button>
-                      )}
-                    </td>
+            <div className="bg-cinema-800 rounded-3xl border border-white/5 overflow-hidden shadow-2xl">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-white/5 text-gray-400 text-[10px] font-black uppercase tracking-widest">
+                    <th className="p-6">Thông tin khách hàng</th>
+                    <th className="p-6 text-right">Hành động</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {users.map((u) => (
+                    <tr key={u.id} className="hover:bg-white/5 transition-colors">
+                      <td className="p-6">
+                        <p className="font-bold">{u.name}</p>
+                        <p className="text-xs text-gray-500 italic">{u.email}</p>
+                      </td>
+                      <td className="p-6 text-right">
+                        {u.role !== "admin" && (
+                          <button
+                            onClick={() => handleDeleteUser(u.id)}
+                            className="text-red-500 font-bold text-xs uppercase hover:underline underline-offset-4"
+                          >
+                            Xóa tài khoản
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
         )}
       </main>
 
+      {/* MODAL FORM THÊM PHIM */}
       {showMovieForm && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-6">
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-6">
           <form
             onSubmit={handleAddMovie}
-            className="bg-cinema-800 p-10 rounded-[40px] w-full max-w-lg space-y-6 border border-white/10 shadow-2xl"
+            className="bg-cinema-800 p-10 rounded-[40px] w-full max-w-lg space-y-6 border border-white/10 shadow-2xl overflow-y-auto max-h-[90vh]"
           >
             <h3 className="text-2xl font-black text-yellow-500 italic text-center uppercase tracking-widest">
               Cấu hình phim mới
             </h3>
 
             <div className="space-y-4">
-              <input
-                className="w-full p-4 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all"
-                placeholder="Tiêu đề phim"
-                value={movieForm.title}
-                onChange={(e) => setMovieForm({ ...movieForm, title: e.target.value })}
-                required
-              />
-              <input
-                className="w-full p-4 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all"
-                placeholder="URL hoặc Tên file ảnh (vd: movie.jpg)"
-                value={movieForm.poster}
-                onChange={(e) => setMovieForm({ ...movieForm, poster: e.target.value })}
-                required
-              />
+              <label className="block">
+                <span className="text-[10px] font-black text-gray-500 uppercase ml-2">Tên phim</span>
+                <input
+                    className="w-full p-4 mt-1 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all font-bold"
+                    placeholder="Nhập tiêu đề..."
+                    value={movieForm.title}
+                    onChange={(e) => setMovieForm({ ...movieForm, title: e.target.value })}
+                    required
+                />
+              </label>
 
-              <select
-                className="w-full p-4 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all font-bold"
-                value={movieForm.status}
-                onChange={(e) =>
-                  setMovieForm({ ...movieForm, status: e.target.value as "now" | "upcoming" })
-                }
-              >
-                <option value="now">🎬 Đang chiếu</option>
-                <option value="upcoming">⏳ Sắp chiếu</option>
-              </select>
+              <label className="block">
+                <span className="text-[10px] font-black text-gray-500 uppercase ml-2">Thể loại</span>
+                <select
+                    className="w-full p-4 mt-1 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all font-bold"
+                    value={movieForm.genre}
+                    onChange={(e) => setMovieForm({ ...movieForm, genre: e.target.value })}
+                >
+                    {GENRES.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="text-[10px] font-black text-gray-500 uppercase ml-2">Ảnh Poster</span>
+                <input
+                    className="w-full p-4 mt-1 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all"
+                    placeholder="URL ảnh hoặc tên file..."
+                    value={movieForm.poster}
+                    onChange={(e) => setMovieForm({ ...movieForm, poster: e.target.value })}
+                    required
+                />
+              </label>
 
               <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="number"
-                  className="p-4 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all"
-                  value={movieForm.price}
-                  onChange={(e) => setMovieForm({ ...movieForm, price: Number(e.target.value) })}
-                />
-                <input
-                  type="number"
-                  className="p-4 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all"
-                  value={movieForm.duration}
-                  onChange={(e) =>
-                    setMovieForm({ ...movieForm, duration: Number(e.target.value) })
-                  }
-                />
+                <label className="block">
+                    <span className="text-[10px] font-black text-gray-500 uppercase ml-2">Trạng thái</span>
+                    <select
+                        className="w-full p-4 mt-1 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all font-bold text-sm"
+                        value={movieForm.status}
+                        onChange={(e) =>
+                        setMovieForm({ ...movieForm, status: e.target.value as "now" | "upcoming" })
+                        }
+                    >
+                        <option value="now">🎬 Đang chiếu</option>
+                        <option value="upcoming">⏳ Sắp chiếu</option>
+                    </select>
+                </label>
+
+                <label className="block">
+                    <span className="text-[10px] font-black text-gray-500 uppercase ml-2">Giá vé (vnđ)</span>
+                    <input
+                        type="number"
+                        className="w-full p-4 mt-1 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all font-bold"
+                        value={movieForm.price}
+                        onChange={(e) => setMovieForm({ ...movieForm, price: Number(e.target.value) })}
+                    />
+                </label>
               </div>
+
+              <label className="block">
+                <span className="text-[10px] font-black text-gray-500 uppercase ml-2">Thời lượng (phút)</span>
+                <input
+                    type="number"
+                    className="w-full p-4 mt-1 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all font-bold"
+                    value={movieForm.duration}
+                    onChange={(e) => setMovieForm({ ...movieForm, duration: Number(e.target.value) })}
+                />
+              </label>
             </div>
 
             <div className="flex gap-4 pt-4">
               <button
                 type="button"
                 onClick={() => setShowMovieForm(false)}
-                className="flex-1 bg-white/5 py-5 rounded-2xl font-bold"
+                className="flex-1 bg-white/5 py-5 rounded-2xl font-bold hover:bg-white/10 transition-colors"
               >
-                Hủy
+                Hủy bỏ
               </button>
-              <button type="submit" className="flex-1 bg-yellow-500 text-black py-5 rounded-2xl font-black">
-                Lưu phim
+              <button type="submit" className="flex-1 bg-yellow-500 text-black py-5 rounded-2xl font-black shadow-lg shadow-yellow-500/20 active:scale-95 transition-all">
+                Lưu vào kho
               </button>
             </div>
           </form>
