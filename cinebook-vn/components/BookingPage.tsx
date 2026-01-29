@@ -1,17 +1,27 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Armchair, CheckCircle2, CreditCard, Info } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { fetchMovieById, getShowtimes } from "../services/api";
 import ConcessionSelector from "./ConcessionSelector";
 
+/* ================= CONFIG ================= */
+const IMAGE_URL = import.meta.env.VITE_IMAGE_URL || "http://localhost:5000";
+
+const BASE_TICKET_PRICE = 55000;
+const COUPLE_PRICE = 120000;
+
+const SEAT_ROWS = ["A", "B", "C", "D", "E"];
+const SEAT_COLS = [1, 2, 3, 4, 5, 6, 7, 8];
+
 /* ================= TYPES ================= */
 type BookingStep = "seats" | "concessions" | "confirm";
+type SeatType = "NORMAL" | "COUPLE";
 
-interface SelectedConcession {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
+interface Seat {
+  id: string;      // A1 | E3-E4
+  row: string;
+  cols: number[];
+  type: SeatType;
 }
 
 interface Showtime {
@@ -20,15 +30,41 @@ interface Showtime {
   bookedSeats: string[];
 }
 
-/* ================= CONST ================= */
-const BASE_TICKET_PRICE = 55000;
-const COUPLE_PRICE = 120000;
+interface SelectedConcession {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
 
-const SEAT_ROWS = ["A", "B", "C", "D", "E"];
-const SEAT_COLS = [1, 2, 3, 4, 5, 6, 7, 8];
+/* ================= SEAT MAP ================= */
+/**
+ * GHẾ ĐÔI chiếm chỗ E3-E4 và E5-E6
+ * => BỎ E3, E4, E5, E6 khỏi ghế thường
+ */
+const COUPLE_SEATS: Seat[] = [
+  { id: "E3-E4", row: "E", cols: [3, 4], type: "COUPLE" },
+  { id: "E5-E6", row: "E", cols: [5, 6], type: "COUPLE" },
+];
 
-/** Định nghĩa GHẾ ĐÔI */
-const COUPLE_SEATS = ["E3-E4", "E5-E6"];
+const NORMAL_SEATS: Seat[] = SEAT_ROWS.flatMap((row) =>
+  SEAT_COLS
+    .filter(
+      (col) =>
+        !(
+          row === "E" &&
+          [3, 4, 5, 6].includes(col)
+        )
+    )
+    .map((col) => ({
+      id: `${row}${col}`,
+      row,
+      cols: [col],
+      type: "NORMAL",
+    }))
+);
+
+const SEATS: Seat[] = [...NORMAL_SEATS, ...COUPLE_SEATS];
 
 /* ================= COMPONENT ================= */
 const BookingPage: React.FC<any> = ({ onCompleteBooking }) => {
@@ -38,83 +74,32 @@ const BookingPage: React.FC<any> = ({ onCompleteBooking }) => {
   const [showtimes, setShowtimes] = useState<Showtime[]>([]);
   const [step, setStep] = useState<BookingStep>("seats");
   const [selectedShowtimeId, setSelectedShowtimeId] = useState<number | null>(null);
-
-  /** 🔥 MULTI SEATS */
-  const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
+  const [selectedSeat, setSelectedSeat] = useState<Seat | null>(null);
 
   const [selectedConcessions, setSelectedConcessions] = useState<SelectedConcession[]>([]);
   const [concessionsTotal, setConcessionsTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
 
   /* ================= LOAD DATA ================= */
   useEffect(() => {
     if (!id) return;
-    setLoading(true);
 
     Promise.all([fetchMovieById(id), getShowtimes(id)])
       .then(([movieRes, showtimeRes]) => {
         setMovie(movieRes);
         setShowtimes(Array.isArray(showtimeRes) ? showtimeRes : []);
-      })
-      .finally(() => setLoading(false));
+      });
   }, [id]);
 
   const currentShowtime = showtimes.find((s) => s.id === selectedShowtimeId);
 
-  /* ================= HELPERS ================= */
+  /* ================= PRICE ================= */
+  const ticketPrice =
+    selectedSeat?.type === "COUPLE" ? COUPLE_PRICE : BASE_TICKET_PRICE;
 
-  /** Check ghế liền kề */
-  const isAdjacentSeat = (seat: string, selected: string[]) => {
-    if (selected.length === 0) return true;
+  const finalTotal = ticketPrice + concessionsTotal;
 
-    const row = seat[0];
-    const col = Number(seat.slice(1));
-
-    return selected.every((s) => {
-      const sRow = s[0];
-      const sCol = Number(s.slice(1));
-      return sRow === row && Math.abs(sCol - col) === 1;
-    });
-  };
-
-  /** Click ghế */
-  const handleSeatClick = (seatId: string) => {
-    // bỏ chọn
-    if (selectedSeats.includes(seatId)) {
-      setSelectedSeats((prev) => prev.filter((s) => s !== seatId));
-      return;
-    }
-
-    // ghế đầu tiên
-    if (selectedSeats.length === 0) {
-      setSelectedSeats([seatId]);
-      return;
-    }
-
-    // không liền kề
-    if (!isAdjacentSeat(seatId, selectedSeats)) {
-      alert("⚠️ Chỉ được chọn ghế liền kề nhau");
-      return;
-    }
-
-    setSelectedSeats((prev) => [...prev, seatId]);
-  };
-
-  /** Check ghế đôi */
-  const isCoupleSeat =
-    selectedSeats.length === 2 &&
-    COUPLE_SEATS.includes(`${selectedSeats[0]}-${selectedSeats[1]}`) ||
-    COUPLE_SEATS.includes(`${selectedSeats[1]}-${selectedSeats[0]}`);
-
-  const ticketTotal = isCoupleSeat
-    ? COUPLE_PRICE
-    : selectedSeats.length * BASE_TICKET_PRICE;
-
-  const finalTotal = ticketTotal + concessionsTotal;
-
-  /* ================= LOADING ================= */
-  if (loading || !movie) {
-    return <div className="h-screen flex items-center justify-center text-white">Đang tải...</div>;
+  if (!movie) {
+    return <div className="h-screen flex items-center justify-center">Đang tải...</div>;
   }
 
   /* ================= CONCESSIONS ================= */
@@ -135,9 +120,9 @@ const BookingPage: React.FC<any> = ({ onCompleteBooking }) => {
   if (step === "confirm") {
     return (
       <div className="max-w-2xl mx-auto p-6">
-        <div className="bg-gray-900 rounded-3xl p-8">
+        <div className="bg-gray-900 p-8 rounded-3xl">
           <h2 className="text-2xl font-black mb-6 flex items-center gap-3">
-            <CreditCard /> Xác nhận thanh toán
+            <CreditCard /> Xác nhận đơn hàng
           </h2>
 
           <div className="space-y-3 text-sm mb-6">
@@ -151,11 +136,9 @@ const BookingPage: React.FC<any> = ({ onCompleteBooking }) => {
             </div>
             <div className="flex justify-between">
               <span>Ghế</span>
-              <span className="text-yellow-500 font-bold">
-                {selectedSeats.join(", ")}
-              </span>
+              <span className="text-yellow-500 font-bold">{selectedSeat?.id}</span>
             </div>
-            {isCoupleSeat && (
+            {selectedSeat?.type === "COUPLE" && (
               <div className="text-pink-500 font-bold">💕 Ghế đôi</div>
             )}
           </div>
@@ -163,7 +146,7 @@ const BookingPage: React.FC<any> = ({ onCompleteBooking }) => {
           <div className="border-t pt-4 space-y-2 text-sm">
             <div className="flex justify-between">
               <span>Tiền vé</span>
-              <span>{ticketTotal.toLocaleString()}đ</span>
+              <span>{ticketPrice.toLocaleString()}đ</span>
             </div>
             {selectedConcessions.map((c) => (
               <div key={c.id} className="flex justify-between text-gray-400">
@@ -173,7 +156,7 @@ const BookingPage: React.FC<any> = ({ onCompleteBooking }) => {
             ))}
           </div>
 
-          <div className="flex justify-between items-center mt-6 text-xl font-black">
+          <div className="flex justify-between text-xl font-black mt-6">
             <span>Tổng</span>
             <span className="text-yellow-500">{finalTotal.toLocaleString()}đ</span>
           </div>
@@ -183,7 +166,7 @@ const BookingPage: React.FC<any> = ({ onCompleteBooking }) => {
               onCompleteBooking(
                 movie,
                 selectedShowtimeId,
-                selectedSeats,
+                selectedSeat,
                 selectedConcessions,
                 finalTotal,
                 currentShowtime?.time
@@ -202,54 +185,51 @@ const BookingPage: React.FC<any> = ({ onCompleteBooking }) => {
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        {/* SEATS */}
-        <div className="lg:col-span-2">
-          <div className="flex flex-col gap-4 items-center">
-            {SEAT_ROWS.map((row) => (
-              <div key={row} className="flex gap-3 items-center">
-                <span className="w-5 text-xs text-gray-500">{row}</span>
-                {SEAT_COLS.map((col) => {
-                  const seatId = `${row}${col}`;
-                  const isBooked = currentShowtime?.bookedSeats.includes(seatId);
-                  const isSelected = selectedSeats.includes(seatId);
-                  const isCouple = COUPLE_SEATS.some((c) => c.includes(seatId));
+        {/* SEAT MAP */}
+        <div className="lg:col-span-2 space-y-4">
+          {SEAT_ROWS.map((row) => (
+            <div key={row} className="flex gap-3 items-center">
+              <span className="w-6 text-gray-500">{row}</span>
+              {SEATS.filter((s) => s.row === row).map((seat) => {
+                const isBooked = currentShowtime?.bookedSeats.includes(seat.id);
+                const isSelected = selectedSeat?.id === seat.id;
 
-                  return (
-                    <button
-                      key={seatId}
-                      disabled={isBooked || !selectedShowtimeId}
-                      onClick={() => handleSeatClick(seatId)}
-                      className={`
-                        w-10 h-10 rounded-lg text-xs font-bold transition-all
-                        ${isBooked
-                          ? "bg-gray-800 text-gray-600"
-                          : isSelected
-                          ? "bg-yellow-500 text-black scale-110"
-                          : isCouple
-                          ? "bg-pink-600 text-white"
-                          : "bg-gray-700 text-white hover:bg-gray-600"}
-                      `}
-                    >
-                      {col}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
+                return (
+                  <button
+                    key={seat.id}
+                    disabled={isBooked || !selectedShowtimeId}
+                    onClick={() => setSelectedSeat(seat)}
+                    className={`
+                      h-10 rounded-xl text-xs font-bold transition-all
+                      ${seat.type === "COUPLE" ? "w-[90px]" : "w-10"}
+                      ${isBooked
+                        ? "bg-gray-800 text-gray-600"
+                        : isSelected
+                        ? "bg-yellow-500 text-black scale-105"
+                        : seat.type === "COUPLE"
+                        ? "bg-pink-600 text-white"
+                        : "bg-gray-700 text-white hover:bg-gray-600"}
+                    `}
+                  >
+                    {seat.type === "COUPLE" ? "💕" : seat.cols[0]}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </div>
 
         {/* SIDEBAR */}
         <div className="space-y-6">
           <div className="bg-gray-900 p-6 rounded-3xl">
-            <h3 className="text-xs uppercase mb-4 text-gray-400">Suất chiếu</h3>
+            <h3 className="text-xs uppercase text-gray-400 mb-4">Suất chiếu</h3>
             <div className="grid grid-cols-3 gap-2">
               {showtimes.map((st) => (
                 <button
                   key={st.id}
                   onClick={() => {
                     setSelectedShowtimeId(st.id);
-                    setSelectedSeats([]);
+                    setSelectedSeat(null);
                   }}
                   className={`py-2 rounded-xl font-bold ${
                     selectedShowtimeId === st.id
@@ -263,8 +243,20 @@ const BookingPage: React.FC<any> = ({ onCompleteBooking }) => {
             </div>
           </div>
 
+          <div className="bg-gray-900 p-6 rounded-3xl">
+            <img
+              src={`${IMAGE_URL}/${movie.image}`}
+              alt={movie.title}
+              className="w-24 h-32 object-cover rounded-xl mb-3"
+            />
+            <h4 className="font-bold">{movie.title}</h4>
+            <p className="text-sm text-gray-400">
+              {movie.duration} phút • {movie.ageRating}
+            </p>
+          </div>
+
           <button
-            disabled={selectedSeats.length < 2}
+            disabled={!selectedSeat}
             onClick={() => setStep("concessions")}
             className="w-full py-4 bg-yellow-500 disabled:bg-gray-800 rounded-2xl font-black"
           >
