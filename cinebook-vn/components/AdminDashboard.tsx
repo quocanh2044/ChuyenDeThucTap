@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { User } from "../types";
+import { Movie, User } from "../types";
 import {
   getAllUsers,
   deleteUser,
@@ -28,7 +28,6 @@ const AdminDashboard: React.FC = () => {
     status: "now" as "now" | "upcoming",
   });
 
-  /* ================= FETCH DATA ================= */
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -40,6 +39,9 @@ const AdminDashboard: React.FC = () => {
       setUsers(Array.isArray(userData) ? userData : []);
 
       const mappedMovies = (revenueData || []).map((m: any) => {
+        const movieRevenue = Number(m.revenue || 0);
+        const ticketsSold = Number(m.sold || 0);
+
         const rawImage = m.image || m.poster;
         let finalPoster = FALLBACK_POSTER;
 
@@ -54,8 +56,8 @@ const AdminDashboard: React.FC = () => {
           price: Number(m.price) || 0,
           duration: Number(m.duration) || 0,
           poster: finalPoster,
-          sold: Number(m.sold || 0),
-          revenue: Number(m.revenue || 0),
+          sold: ticketsSold,
+          revenue: movieRevenue,
           isNowPlaying: m.isNowPlaying,
           upcoming: m.upcoming,
         };
@@ -73,17 +75,17 @@ const AdminDashboard: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
-  /* ================= STATS ================= */
   const stats = useMemo(() => {
+    const totalRevenue = movies.reduce((sum, m) => sum + m.revenue, 0);
+    const totalTickets = movies.reduce((sum, m) => sum + m.sold, 0);
     return {
-      revenue: movies.reduce((sum, m) => sum + m.revenue, 0),
-      tickets: movies.reduce((sum, m) => sum + m.sold, 0),
+      revenue: totalRevenue,
+      tickets: totalTickets,
       movieCount: movies.length,
       userCount: users.length,
     };
   }, [movies, users]);
 
-  /* ================= ACTIONS ================= */
   const handleAddMovie = async (e: React.FormEvent) => {
     e.preventDefault();
     const movieData = {
@@ -129,8 +131,8 @@ const AdminDashboard: React.FC = () => {
     return (
       <div className="h-screen flex items-center justify-center bg-cinema-900 text-white font-black italic uppercase tracking-[0.3em]">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
-          Đang trích xuất dữ liệu...
+            <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+            Đang trích xuất dữ liệu...
         </div>
       </div>
     );
@@ -159,7 +161,7 @@ const AdminDashboard: React.FC = () => {
         </nav>
       </aside>
 
-      {/* MAIN CONTENT */}
+      {/* MAIN */}
       <main className="flex-1 p-10 overflow-y-auto">
         {activeTab === "dashboard" && (
           <div className="space-y-10 animate-in fade-in duration-500">
@@ -171,7 +173,6 @@ const AdminDashboard: React.FC = () => {
               <StatCard title="Thành viên" value={stats.userCount} color="text-green-400" />
             </div>
 
-            {/* PERFORMANCE CHART SIMULATION */}
             <div className="bg-cinema-800 p-8 rounded-[40px] border border-white/5 shadow-2xl">
               <h3 className="text-lg font-black mb-8 italic flex items-center gap-2 uppercase tracking-widest text-gray-400">
                 <span className="w-2 h-6 bg-yellow-500 rounded-full"></span>
@@ -212,14 +213,16 @@ const AdminDashboard: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-8">
               {movies.map((m) => (
                 <div key={m.id} className="bg-cinema-800 rounded-3xl overflow-hidden border border-white/5 flex flex-col group hover:border-white/20 transition-all shadow-xl">
-                  {/* POSTER CLEAN - NO LABELS */}
-                  <div className="relative aspect-[3/4.5] overflow-hidden">
+                  <div className="relative aspect-[3/4.5]">
                     <img
                       src={m.poster}
                       alt={m.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 blur-[0.2px] group-hover:blur-0"
                       onError={(e) => ((e.target as HTMLImageElement).src = FALLBACK_POSTER)}
                     />
+                    <div className="absolute top-4 left-4 px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest bg-black/80 backdrop-blur-md">
+                      {m.isNowPlaying ? <span className="text-green-400">● Now Playing</span> : <span className="text-blue-400">Upcoming</span>}
+                    </div>
                   </div>
 
                   <div className="p-6 flex-1 flex flex-col justify-between">
@@ -229,12 +232,12 @@ const AdminDashboard: React.FC = () => {
                       </h4>
                       <div className="bg-cinema-900/50 p-4 rounded-2xl mb-6 flex justify-between">
                         <div>
-                          <p className="text-[10px] text-gray-500 font-black uppercase">Đã bán</p>
-                          <p className="font-bold">{m.sold}</p>
+                            <p className="text-[10px] text-gray-500 font-black uppercase">Đã bán</p>
+                            <p className="font-bold">{m.sold}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-[10px] text-gray-500 font-black uppercase">Doanh thu</p>
-                          <p className="font-bold text-yellow-500">{m.revenue.toLocaleString()}</p>
+                            <p className="text-[10px] text-gray-500 font-black uppercase">Doanh thu</p>
+                            <p className="font-bold text-yellow-500">{m.revenue.toLocaleString()}</p>
                         </div>
                       </div>
                     </div>
@@ -285,44 +288,47 @@ const AdminDashboard: React.FC = () => {
         )}
       </main>
 
-      {/* MODAL THÊM PHIM */}
+      {/* CHUYÊN NGHIỆP: MODAL THÊM PHIM VỚI LIVE PREVIEW */}
       {showMovieForm && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-[100] p-6 animate-in fade-in duration-300">
           <form
             onSubmit={handleAddMovie}
             className="bg-cinema-800 w-full max-w-4xl rounded-[40px] border border-white/10 shadow-3xl overflow-hidden flex flex-col md:flex-row transition-all"
           >
-            {/* LIVE PREVIEW - NO LABELS */}
+            {/* PREVIEW BÊN TRÁI */}
             <div className="w-full md:w-80 bg-black/40 border-r border-white/5 p-8 flex flex-col items-center justify-center">
-              <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest mb-6">Live Preview</p>
-              <div className="w-full aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl bg-cinema-900 flex items-center justify-center border border-white/5">
-                {movieForm.poster ? (
-                  <img src={movieForm.poster} className="w-full h-full object-cover animate-in zoom-in duration-500" onError={(e) => (e.currentTarget.src = FALLBACK_POSTER)} />
-                ) : (
-                  <div className="text-gray-700 text-center p-4">
-                    <span className="text-4xl block mb-2">🎞️</span>
-                    <span className="text-[10px] font-bold uppercase italic">Chờ liên kết ảnh...</span>
-                  </div>
-                )}
-              </div>
+                <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest mb-6">Live Preview</p>
+                <div className="w-full aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl bg-cinema-900 flex items-center justify-center border border-white/5">
+                    {movieForm.poster ? (
+                        <img src={movieForm.poster} className="w-full h-full object-cover animate-in zoom-in duration-500" onError={(e) => (e.currentTarget.src = FALLBACK_POSTER)} />
+                    ) : (
+                        <div className="text-gray-700 text-center p-4">
+                            <span className="text-4xl block mb-2">🎞️</span>
+                            <span className="text-[10px] font-bold uppercase italic">Chờ liên kết ảnh...</span>
+                        </div>
+                    )}
+                </div>
+                <div className="mt-8 text-[10px] text-gray-500 text-center leading-relaxed font-bold uppercase opacity-50">
+                    Kích thước đề xuất<br/>1200 x 1800 px
+                </div>
             </div>
 
-            {/* FORM INPUTS */}
+            {/* FORM BÊN PHẢI */}
             <div className="flex-1 p-8 lg:p-12 space-y-8 overflow-y-auto max-h-[90vh]">
               <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-3xl font-black text-yellow-500 italic uppercase tracking-tighter">Cấu hình phim mới</h3>
-                  <div className="h-1 w-12 bg-yellow-500 mt-2 rounded-full"></div>
-                </div>
-                <button type="button" onClick={() => setShowMovieForm(false)} className="text-gray-500 hover:text-white transition-colors">✕</button>
+                  <div>
+                    <h3 className="text-3xl font-black text-yellow-500 italic uppercase tracking-tighter">Cấu hình phim mới</h3>
+                    <div className="h-1 w-12 bg-yellow-500 mt-2 rounded-full"></div>
+                  </div>
+                  <button type="button" onClick={() => setShowMovieForm(false)} className="text-gray-500 hover:text-white transition-colors">✕</button>
               </div>
 
               <div className="space-y-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-gray-400 ml-2 tracking-widest">Tên phim thương mại</label>
                   <input
-                    className="w-full p-4 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all font-bold text-lg text-white"
-                    placeholder="Tên phim..."
+                    className="w-full p-4 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all font-bold text-lg"
+                    placeholder="Spider-Man: No Way Home"
                     value={movieForm.title}
                     onChange={(e) => setMovieForm({ ...movieForm, title: e.target.value })}
                     required
@@ -332,8 +338,8 @@ const AdminDashboard: React.FC = () => {
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-gray-400 ml-2 tracking-widest">Đường dẫn Poster (URL)</label>
                   <input
-                    className="w-full p-4 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all text-xs font-mono text-white"
-                    placeholder="https://..."
+                    className="w-full p-4 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all text-xs font-mono"
+                    placeholder="https://example.com/poster.jpg"
                     value={movieForm.poster}
                     onChange={(e) => setMovieForm({ ...movieForm, poster: e.target.value })}
                     required
@@ -344,12 +350,12 @@ const AdminDashboard: React.FC = () => {
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase text-gray-400 ml-2 tracking-widest">Trạng thái công chiếu</label>
                     <select
-                      className="w-full p-4 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all font-bold text-sm cursor-pointer text-white"
+                      className="w-full p-4 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all font-bold text-sm cursor-pointer appearance-none"
                       value={movieForm.status}
                       onChange={(e) => setMovieForm({ ...movieForm, status: e.target.value as any })}
                     >
-                      <option value="now" className="bg-cinema-800">Đang chiếu (Now Playing)</option>
-                      <option value="upcoming" className="bg-cinema-800">Sắp ra mắt (Upcoming)</option>
+                      <option value="now">🎬 Đang chiếu (Now Playing)</option>
+                      <option value="upcoming">⏳ Sắp ra mắt (Upcoming)</option>
                     </select>
                   </div>
 
@@ -358,16 +364,16 @@ const AdminDashboard: React.FC = () => {
                       <label className="text-[10px] font-black uppercase text-gray-400 ml-2 tracking-widest">Giá vé (đ)</label>
                       <input
                         type="number"
-                        className="w-full p-4 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all font-bold text-white"
+                        className="w-full p-4 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all font-bold"
                         value={movieForm.price}
                         onChange={(e) => setMovieForm({ ...movieForm, price: Number(e.target.value) })}
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-gray-400 ml-2 tracking-widest">Phút</label>
+                      <label className="text-[10px] font-black uppercase text-gray-400 ml-2 tracking-widest">Thời lượng</label>
                       <input
                         type="number"
-                        className="w-full p-4 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all font-bold text-white"
+                        className="w-full p-4 bg-cinema-900 border border-white/5 rounded-2xl outline-none focus:border-yellow-500 transition-all font-bold"
                         value={movieForm.duration}
                         onChange={(e) => setMovieForm({ ...movieForm, duration: Number(e.target.value) })}
                       />
